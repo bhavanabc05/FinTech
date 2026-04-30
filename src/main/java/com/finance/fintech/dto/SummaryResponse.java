@@ -8,4 +8,5 @@ public class SummaryResponse {
     private double totalIncome;
     private double totalExpense;
     private double savings;
+    private String message;
 }
