@@ -1,5 +1,6 @@
 package com.finance.fintech.service;
 
+import com.finance.fintech.dto.TransactionRequest;
 import com.finance.fintech.entity.Transaction;
 import com.finance.fintech.entity.Budget;
 import com.finance.fintech.repository.TransactionRepository;
@@ -20,12 +21,35 @@ public class TransactionService {
     @Autowired
     private BudgetRepository budgetRepository;
 
-    public Map<String, Object> addTransaction(Transaction transaction) {
+    // ADD TRANSACTION (WITH VALIDATION + ALERT)
+    public Map<String, Object> addTransaction(TransactionRequest request) {
+
+        // TYPE VALIDATION
+        if (!request.getType().equalsIgnoreCase("income") &&
+                !request.getType().equalsIgnoreCase("expense")) {
+            throw new RuntimeException("Invalid transaction type. Must be 'income' or 'expense'");
+        }
+
+        // DATE SAFETY CHECK
+        if (request.getDate() == null) {
+            throw new RuntimeException("Transaction date cannot be null");
+        }
+
+        // DTO → ENTITY MAPPING
+        Transaction transaction = new Transaction();
+        transaction.setUserId(request.getUserId());
+        transaction.setType(request.getType().toLowerCase());
+        transaction.setAmount(request.getAmount());
+        transaction.setCategory(request.getCategory());
+        transaction.setDescription(request.getDescription());
+        transaction.setDate(request.getDate());
 
         Transaction saved = transactionRepository.save(transaction);
 
+        // BUDGET ALERT
         String alert = checkBudgetAlert(saved);
 
+        // RESPONSE
         Map<String, Object> response = new HashMap<>();
         response.put("transaction", saved);
         response.put("alert", alert);
@@ -33,14 +57,17 @@ public class TransactionService {
         return response;
     }
 
+    // GET ALL TRANSACTIONS
     public List<Transaction> getTransactions(int userId) {
         return transactionRepository.findByUserId(userId);
     }
 
+    // SUMMARY (WITH RECOMMENDATION)
     public SummaryResponse getSummary(int userId) {
         double income = transactionRepository.getTotalIncome(userId);
         double expense = transactionRepository.getTotalExpense(userId);
         double savings = income - expense;
+
         String message;
 
         if (income == 0 && expense > 0) {
@@ -50,12 +77,19 @@ public class TransactionService {
         } else if (savings == 0) {
             message = "No savings recorded.";
         } else {
-            message = "Good job! You are saving money.";
+            double savingRate = (income == 0) ? 0 : (savings / income) * 100;
+
+            if (savingRate < 20) {
+                message = "Try saving more. Current savings: " + (int) savingRate + "%";
+            } else {
+                message = "Good job! You are saving " + (int) savingRate + "% of your income.";
+            }
         }
 
         return new SummaryResponse(income, expense, savings, message);
     }
 
+    // CATEGORY SUMMARY
     public Map<String, Double> getCategorySummary(int userId) {
 
         List<Object[]> results = transactionRepository.getCategoryWiseSummary(userId);
@@ -71,7 +105,12 @@ public class TransactionService {
         return summary;
     }
 
+    // BUDGET ALERT (DYNAMIC)
     public String checkBudgetAlert(Transaction transaction) {
+
+        if (transaction.getDate() == null) {
+            return "Invalid date";
+        }
 
         int userId = transaction.getUserId();
         String category = transaction.getCategory();
@@ -87,26 +126,29 @@ public class TransactionService {
         }
 
         double spent = transactionRepository.getCategoryExpense(userId, category, month, year);
-
         double limit = budget.getLimitAmount();
 
+        double percent = (spent / limit) * 100;
+
         if (spent >= limit) {
-            return "Budget exceeded!";
+            return "Budget exceeded! (" + (int) percent + "% used)";
         } else if (spent >= 0.8 * limit) {
-            return "⚠️ 80% of budget used";
+            return "⚠️ Warning: " + (int) percent + "% of budget used";
         } else {
-            return "Within budget";
+            return "Within budget (" + (int) percent + "% used)";
         }
     }
 
+    // DELETE TRANSACTION
     public void deleteTransaction(int id) {
         if (!transactionRepository.existsById(id)) {
-            throw new RuntimeException("Transaction not found");
+            throw new RuntimeException("Transaction with ID " + id + " not found");
         }
         transactionRepository.deleteById(id);
     }
 
-    // 🔹 FILTER METHODS
+    // FILTER METHODS
+
     public List<Transaction> filterByType(int userId, String type) {
         return transactionRepository.findByUserIdAndType(userId, type);
     }

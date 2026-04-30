@@ -1,7 +1,9 @@
 package com.finance.fintech.controller;
 
+import jakarta.validation.Valid;
 import com.finance.fintech.entity.Goal;
 import com.finance.fintech.dto.GoalResponse;
+import com.finance.fintech.dto.ApiResponse;
 import com.finance.fintech.service.GoalService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +18,29 @@ public class GoalController {
     @Autowired
     private GoalService goalService;
 
+    // ADD GOAL
     @PostMapping
-    public Goal addGoal(@RequestBody Goal goal) {
-        return goalService.addGoal(goal);
+    public ApiResponse<Goal> addGoal(@Valid @RequestBody Goal goal) {
+
+        Goal saved = goalService.addGoal(goal);
+
+        return new ApiResponse<>(
+                true,
+                "Goal added successfully",
+                saved
+        );
     }
 
+    // GET GOALS
     @GetMapping("/{userId}")
-    public List<GoalResponse> getGoals(@PathVariable int userId) {
-        return goalService.getGoals(userId);
+    public ApiResponse<List<GoalResponse>> getGoals(@PathVariable int userId) {
+
+        List<GoalResponse> list = goalService.getGoals(userId);
+
+        return new ApiResponse<>(
+                true,
+                "Goals fetched successfully",
+                list
+        );
     }
 }

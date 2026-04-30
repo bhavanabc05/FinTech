@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import com.finance.fintech.entity.User;
 import com.finance.fintech.service.UserService;
 import com.finance.fintech.dto.ApiResponse;
+import com.finance.fintech.dto.UserResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,29 +16,41 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/register")
-    public ApiResponse<User> register(@Valid @RequestBody User user) {
+    public ApiResponse<UserResponse> register(@Valid @RequestBody User user) {
 
         User savedUser = userService.registerUser(user);
+
+        UserResponse response = new UserResponse(
+                savedUser.getUserId(),
+                savedUser.getName(),
+                savedUser.getEmail()
+        );
 
         return new ApiResponse<>(
                 true,
                 "User registered successfully",
-                savedUser
+                response
         );
     }
 
     @PostMapping("/login")
-    public ApiResponse<User> login(@RequestBody User user) {
+    public ApiResponse<UserResponse> login(@Valid @RequestBody User user) {
 
         User loggedIn = userService.loginUser(
                 user.getEmail(),
                 user.getPassword()
         );
 
+        UserResponse response = new UserResponse(
+                loggedIn.getUserId(),
+                loggedIn.getName(),
+                loggedIn.getEmail()
+        );
+
         return new ApiResponse<>(
                 true,
                 "Login successful",
-                loggedIn
+                response
         );
     }
 }
