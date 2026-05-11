@@ -5,6 +5,7 @@ import com.finance.fintech.entity.User;
 import com.finance.fintech.service.UserService;
 import com.finance.fintech.dto.ApiResponse;
 import com.finance.fintech.dto.UserResponse;
+import com.finance.fintech.dto.LoginRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,11 +35,11 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<UserResponse> login(@Valid @RequestBody User user) {
+    public ApiResponse<UserResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
 
         User loggedIn = userService.loginUser(
-                user.getEmail(),
-                user.getPassword()
+                loginRequest.getEmail(),
+                loginRequest.getPassword()
         );
 
         UserResponse response = new UserResponse(
